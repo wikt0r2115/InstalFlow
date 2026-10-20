@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:${POSTGRES_PORT:5432}/${POSTGRES_DB:instalflow}
+    username: ${POSTGRES_USER:instalflow}
+    password: ""
+  mail:
+    host: 127.0.0.1
+    port: ${MAILPIT_SMTP_PORT:1025}
+
+server:
+  address: 127.0.0.1
