@@ -4,7 +4,7 @@ Szkielet aplikacji backendowej Spring Boot. Projekt używa Maven Wrappera, a lok
 
 ## Wymagania
 
-- JDK 21 (ustaw jako Project SDK oraz JDK dla Maven w IntelliJ IDEA)
+- JDK 25 (ustaw jako Project SDK oraz JDK dla Maven w IntelliJ IDEA)
 - Docker Engine/Desktop z działającym Docker Compose v2 (`docker compose version`)
 - wolne porty `5432`, `1025` i `8025`
 
