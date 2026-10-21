@@ -9,7 +9,7 @@ services:
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     networks:
-      - postgres-internal
+      - postgres-local
     volumes:
       - instalflow-postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -26,13 +26,11 @@ services:
       - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
       - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
     networks:
-      - mailpit-internal
+      - mailpit-local
 
 networks:
-  postgres-internal:
-    internal: true
-  mailpit-internal:
-    internal: true
+  postgres-local:
+  mailpit-local:
 
 volumes:
   instalflow-postgres-data:

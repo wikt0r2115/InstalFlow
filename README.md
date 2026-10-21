@@ -19,7 +19,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Compose automatycznie wczytuje plik `.env`. PostgreSQL używa bezhasłowego uwierzytelniania `trust` wyłącznie w odizolowanej lokalnej sieci Compose. Ta sieć nie jest współdzielona z Mailpit; z hosta baza jest osiągalna tylko przez port `127.0.0.1:5432`. To ustawienie służy wyłącznie do lokalnego developmentu — nie używaj go dla produkcji ani danych produkcyjnych. Compose czeka na gotowość PostgreSQL przez healthcheck. Mailpit przyjmuje testowe wiadomości SMTP na `127.0.0.1:1025`, a jego panel jest dostępny pod <http://127.0.0.1:8025>; działa w osobnej, odizolowanej sieci Compose. Dane PostgreSQL są przechowywane w wolumenie Dockera.
+Compose automatycznie wczytuje plik `.env`. PostgreSQL używa bezhasłowego uwierzytelniania `trust` na potrzeby lokalnego developmentu. PostgreSQL i Mailpit działają w osobnych sieciach Compose, a ich porty są publikowane na hoście wyłącznie pod `127.0.0.1`: baza na porcie `5432`, SMTP na `1025`, panel Mailpit pod <http://127.0.0.1:8025>. Nie używaj tej konfiguracji dla produkcji ani danych produkcyjnych. Compose czeka na gotowość PostgreSQL przez healthcheck. Dane PostgreSQL są przechowywane w wolumenie Dockera.
 
 ## Budowanie i uruchamianie
 
