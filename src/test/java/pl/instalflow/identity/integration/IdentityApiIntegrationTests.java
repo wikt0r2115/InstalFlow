@@ -63,6 +63,47 @@ class IdentityApiIntegrationTests {
     }
 
     @Test
+    void invalidJsonScalarTypesCannotCreateOrMutateAccounts() throws Exception {
+        Session owner = login(OWNER_EMAIL, OWNER_PASSWORD);
+        String technician = create(owner, "typed-tech@example.com", "TECHNICIAN");
+        UUID id = UUID.fromString(JsonPath.read(technician, "$.id"));
+        long version = number(technician, "$.version");
+
+        mvc.perform(withCsrf(owner, post(API + "/users").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"bad-types@example.com\",\"password\":123,\"role\":\"OFFICE\"}")))
+                .andExpect(status().isBadRequest());
+        for (String invalidRole : List.of("1", "\"1\"")) {
+            mvc.perform(withCsrf(owner, patch(API + "/users/" + id).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"role\":" + invalidRole + ",\"version\":" + version + "}")))
+                    .andExpect(status().isBadRequest());
+        }
+        for (String invalidVersion : List.of("0.7", "\"" + version + "\"")) {
+            mvc.perform(withCsrf(owner, patch(API + "/users/" + id).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"role\":\"OFFICE\",\"version\":" + invalidVersion + "}")))
+                    .andExpect(status().isBadRequest());
+        }
+        assertThat(jdbc.queryForObject("SELECT role FROM app_user WHERE id = ?", String.class, id))
+                .isEqualTo("TECHNICIAN");
+        assertThat(jdbc.queryForObject("SELECT version FROM app_user WHERE id = ?", Long.class, id))
+                .isEqualTo(version);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM app_user WHERE email_normalized = ?",
+                Integer.class, "bad-types@example.com")).isZero();
+    }
+
+    @Test
+    void onlyOwnerCanDownloadTheImplementedOpenApiContract() throws Exception {
+        mvc.perform(get("/openapi.yaml")).andExpect(status().isUnauthorized());
+        Session owner = login(OWNER_EMAIL, OWNER_PASSWORD);
+        String contract = body(mvc.perform(get("/openapi.yaml").cookie(owner.cookie))
+                .andExpect(status().isOk()).andReturn());
+        assertThat(contract).contains("openapi: 3.1.0", "/api/v1/auth/login:", "/api/v1/users:");
+
+        create(owner, "office@example.com", "OFFICE");
+        Session office = login("office@example.com", "Test-password-123!");
+        mvc.perform(get("/openapi.yaml").cookie(office.cookie)).andExpect(status().isForbidden());
+    }
+
+    @Test
     void ownerCanCreateAccountsAndResponsesNeverExposePasswordHash() throws Exception {
         Session owner = login(OWNER_EMAIL, OWNER_PASSWORD);
         String office = create(owner, " Office@Example.com ", "OFFICE");

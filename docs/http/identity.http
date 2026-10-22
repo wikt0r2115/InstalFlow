@@ -1,0 +1,74 @@
+# Run requests in order in an HTTP client that retains response cookies (e.g. IntelliJ HTTP Client).
+# Configure baseUrl, ownerEmail, ownerPassword, newUserEmail, newUserPassword and replacementPassword
+# in your private HTTP client environment; never commit real credentials.
+# baseUrl can be http://localhost:8080 for the local profile; production requires HTTPS.
+
+### 1. Start a session and collect the CSRF token
+GET {{baseUrl}}/api/v1/auth/csrf
+
+> {% client.global.set("csrf", response.body.token); %}
+
+### 2. Log in; the client must retain the rotated SESSION cookie
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+X-CSRF-TOKEN: {{csrf}}
+
+{"email":"{{ownerEmail}}","password":"{{ownerPassword}}"}
+
+### 3. Fetch a fresh token after successful login
+GET {{baseUrl}}/api/v1/auth/csrf
+
+> {% client.global.set("csrf", response.body.token); %}
+
+### 4. Read your own identity
+GET {{baseUrl}}/api/v1/auth/me
+
+### 5. Read the contract (OWNER only)
+GET {{baseUrl}}/openapi.yaml
+
+### 6. Create a technician (OWNER only)
+POST {{baseUrl}}/api/v1/users
+Content-Type: application/json
+X-CSRF-TOKEN: {{csrf}}
+
+{"email":"{{newUserEmail}}","password":"{{newUserPassword}}","role":"TECHNICIAN"}
+
+> {% client.global.set("userId", response.body.id); client.global.set("version", response.body.version); %}
+
+### 7. List accounts (OWNER only)
+GET {{baseUrl}}/api/v1/users?page=0&size=20&sort=employeeNumber&direction=asc
+
+### 8. List active technicians (OWNER or OFFICE; no email addresses)
+GET {{baseUrl}}/api/v1/users/technicians?page=0&size=20
+
+### 9. Change role with the current version
+PATCH {{baseUrl}}/api/v1/users/{{userId}}
+Content-Type: application/json
+X-CSRF-TOKEN: {{csrf}}
+
+{"role":"OFFICE","version":{{version}}}
+
+> {% client.global.set("version", response.body.version); %}
+
+### 10. Change password; this revokes the target account's sessions
+POST {{baseUrl}}/api/v1/users/{{userId}}/password
+Content-Type: application/json
+X-CSRF-TOKEN: {{csrf}}
+
+{"password":"{{replacementPassword}}","version":{{version}}}
+
+### 11. Fetch the current version after a mutation with no response body
+GET {{baseUrl}}/api/v1/users/{{userId}}
+
+> {% client.global.set("version", response.body.version); %}
+
+### 12. Deactivate; email remains reserved
+POST {{baseUrl}}/api/v1/users/{{userId}}/deactivate
+Content-Type: application/json
+X-CSRF-TOKEN: {{csrf}}
+
+{"version":{{version}}}
+
+### 13. Logout requires CSRF too
+POST {{baseUrl}}/api/v1/auth/logout
+X-CSRF-TOKEN: {{csrf}}

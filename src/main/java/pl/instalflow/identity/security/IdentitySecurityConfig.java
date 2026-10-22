@@ -18,6 +18,7 @@ import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -65,6 +66,7 @@ class IdentitySecurityConfig {
             .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/api/v1/auth/csrf", "/api/v1/auth/login").permitAll()
+                .requestMatchers(HttpMethod.GET, "/openapi.yaml").hasRole("OWNER")
                 .requestMatchers("/api/v1/auth/me", "/api/v1/auth/logout").authenticated()
                 .requestMatchers("/api/v1/users/technicians").hasAnyRole("OWNER", "OFFICE")
                 .requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("OWNER")

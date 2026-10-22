@@ -60,6 +60,20 @@ Limit prób logowania działa w pamięci jednej instancji aplikacji. Uruchomieni
 
 Błędy API mają format `application/problem+json` z polami `status`, `title`, `detail`, `code`, `requestId` i `instance`. Pole `type` jest opcjonalne; jego brak oznacza `about:blank`. Błędy walidacji zawierają również `violations`. Identyfikator żądania jest zwracany także w nagłówku `X-Request-Id`.
 
+## Kontrakt API, czas i moduły
+
+Aktualny kontrakt działających endpointów znajduje się w [OpenAPI](src/main/resources/static/openapi.yaml). Po zalogowaniu jako OWNER można go pobrać przez `GET /openapi.yaml`. [Kolekcja żądań HTTP](docs/http/identity.http) pokazuje pełny proces: CSRF, logowanie, utworzenie konta, zmianę roli i hasła, dezaktywację i wylogowanie. Dane logowania ustawiaj w prywatnym środowisku klienta HTTP; klient musi zachowywać cookie sesji.
+
+Kwoty i ilości w JSON są tekstem dziesiętnym, np. `"120.00"` oraz `"2.500"`. Konwerter zachowuje precyzję i skalę, bez zaokrąglania. Liczbowe tokeny JSON, zapis wykładniczy, przecinek i białe znaki są odrzucane. Limit dwóch miejsc dla cen oraz trzech dla ilości jest regułą domeny; sama serializacja nie wykonuje kalkulacji oferty.
+
+Typy pól JSON są sprawdzane ściśle: `version` wymaga liczby całkowitej, rola swojej nazwy tekstowej, a hasło tekstu. Wartości takie jak `version: 0.7`, `version: "0"`, `role: 1` czy `password: 123` zwracają 400.
+
+Czas w DTO reprezentuje `Instant`: wejście wymaga ISO 8601 z offsetem, np. `2026-10-22T14:00:00+02:00`, a odpowiedź używa UTC, np. `2026-10-22T12:00:00Z`. Logika aplikacji wstrzykuje wspólny `java.time.Clock`, domyślnie UTC; test może zastąpić go zegarem stałym. Znaczniki `created_at` generowane przez PostgreSQL zachowują semantykę czasu bazy.
+
+[Opis architektury](docs/architecture.md) i [ADR-001](docs/adr/ADR-001-module-boundaries-and-jobs-contract.md) pokazują zamknięte moduły, dozwolone zależności i kontrakt `jobs :: api`. Testy sprawdzają rzeczywistą strukturę oraz odrzucenie celowo błędnego importu i cyklu. Interfejs `Jobs.createFromAcceptedOffer` przyjmuje niezmienną migawkę; implementacja zapisu zlecenia należy do J01.
+
+Pełna weryfikacja kontraktu i architektury jest częścią `./mvnw clean verify`. Próbnym endpointom testowym nie odpowiadają żadne trasy produkcyjne.
+
 ## Migracje bazy danych
 
 Przy starcie z podłączonym PostgreSQL Spring Boot uruchamia Flyway przed udostępnieniem aplikacji. Flyway zapisuje wykonane migracje i ich sumy kontrolne w tabeli `flyway_schema_history`. Migracja V1 tworzy `app_user`, V2 uzupełnia ograniczenia i generowanie numeru pracownika, a V3 tworzy tabele sesji Spring Session. Przy nowej bazie migracje wykonują się kolejno. Próbne tabele testu F03 powstają wyłącznie w kontenerze testowym.
