@@ -46,6 +46,14 @@ Profile wybiera się również w IntelliJ w konfiguracji uruchomieniowej aplikac
 
 Compose wczytuje `.env`, ale proces aplikacji uruchamiany z IntelliJ ani z powyższego polecenia Maven nie wczytuje tego pliku automatycznie. Domyślne wartości profilu `local` są zgodne z domyślną konfiguracją Compose. Jeśli zmienisz wartości w `.env`, ustaw odpowiadające im zmienne (`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PORT`, `MAILPIT_SMTP_PORT`) również w **Run Configuration → Environment variables** IntelliJ albo w środowisku powłoki przed startem Maven.
 
+## CI — GitHub Actions
+
+Workflow [CI](.github/workflows/ci.yml) uruchamia się przy każdym pushu, pull requeście oraz ręcznie przez **Actions → CI → Run workflow**. Używa Ubuntu 24.04, JDK 25 Temurin i cache zależności Maven, a następnie wykonuje `./mvnw --batch-mode --no-transfer-progress clean verify`. Testcontainers uruchamia izolowane bazy PostgreSQL na Dockerze runnera; CI nie wymaga Compose, pliku `.env` ani sekretów aplikacji.
+
+Przy niepowodzeniu dostępne raporty Surefire i Failsafe trafiają do artefaktu `test-reports-…` na stronie uruchomienia i są przechowywane przez 7 dni. Nowe uruchomienie anuluje poprzednie dla tego samego rodzaju zdarzenia i referencji Git. Akcje są przypięte do pełnych SHA; lokalnie ten sam zestaw kontroli uruchamia `./mvnw clean verify` przy JDK 25 i działającym Dockerze.
+
+Faktyczny wynik na GitHubie można potwierdzić dopiero po wypchnięciu commita i zakończeniu workflow. Zmianę konfiguracji CI można wycofać przez `git revert` commita dodającego workflow.
+
 ## Pierwszy właściciel i konta pracowników
 
 Na pustej tabeli `app_user` aplikacja wymaga jednorazowego utworzenia konta właściciela. Przed pierwszym startem ustaw w środowisku procesu aplikacji obie zmienne `INSTALFLOW_BOOTSTRAP_OWNER_EMAIL` i `INSTALFLOW_BOOTSTRAP_OWNER_PASSWORD` (w IntelliJ: **Run Configuration → Environment variables**). Po utworzeniu konta usuń te zmienne z konfiguracji uruchomieniowej; hasło nie powinno trafić do Git ani do `.env` Compose. Podanie tylko jednej z tych zmiennych przerywa start. Po utworzeniu jakiegokolwiek użytkownika bootstrap nie tworzy kolejnego konta.
