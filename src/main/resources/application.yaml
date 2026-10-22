@@ -3,6 +3,12 @@ spring:
     name: instalflow
   profiles:
     default: local
+  flyway:
+    locations: classpath:db/migration
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
 management:
   endpoints:
     web:

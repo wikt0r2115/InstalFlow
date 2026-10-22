@@ -1,9 +1,8 @@
 spring:
+  config:
+    import: classpath:application-local.yaml
   main:
     banner-mode: off
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
 
 server:
   port: 8080

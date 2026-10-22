@@ -30,21 +30,33 @@ W katalogu głównym repozytorium:
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-Aby uruchomić testy (Spring Boot Test aktywuje profil `test` dla testów):
+Aby uruchomić testy:
 
 ```bash
 ./mvnw test
 ```
 
-Profil `demo` można włączyć podczas uruchamiania aplikacji:
+Profil `demo` korzysta z tej samej lokalnej bazy i usług Compose co `local`. Można go włączyć podczas uruchamiania aplikacji:
 
 ```bash
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=demo
 ```
 
-Profile wybiera się również w IntelliJ w konfiguracji uruchomieniowej aplikacji, w polu **Active profiles**. Profil `local` jest przeznaczony do pracy z usługami z Compose. Testy jednostkowe profilu `test` powinny działać bez uruchomionego Dockera, o ile nie korzystają z zewnętrznych usług.
+Profile wybiera się również w IntelliJ w konfiguracji uruchomieniowej aplikacji, w polu **Active profiles**. Profil `local` jest przeznaczony do pracy z usługami z Compose. Pełny zestaw testów wymaga działającego Dockera, ponieważ testy aplikacji, kont i migracji uruchamiają PostgreSQL przez Testcontainers.
 
 Compose wczytuje `.env`, ale proces aplikacji uruchamiany z IntelliJ ani z powyższego polecenia Maven nie wczytuje tego pliku automatycznie. Domyślne wartości profilu `local` są zgodne z domyślną konfiguracją Compose. Jeśli zmienisz wartości w `.env`, ustaw odpowiadające im zmienne (`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PORT`, `MAILPIT_SMTP_PORT`) również w **Run Configuration → Environment variables** IntelliJ albo w środowisku powłoki przed startem Maven.
+
+## Migracje bazy danych
+
+Przy starcie z podłączonym PostgreSQL Spring Boot uruchamia Flyway przed udostępnieniem aplikacji. Flyway zapisuje wykonane migracje i ich sumy kontrolne w tabeli `flyway_schema_history`. Migracja V1 tworzy `app_user`, a V2 uzupełnia ograniczenia i generowanie numeru pracownika. Przy nowej bazie migracje wykonują się kolejno. Próbne tabele testu F03 powstają wyłącznie w kontenerze testowym.
+
+Profil `local` łączy się domyślnie z bazą **`instalflow`** na porcie 5432; baza `postgres` w tym samym serwerze nie jest domyślną bazą aplikacji. Migracje uruchamiaj przez start aplikacji, nie wykonuj plików SQL ręcznie w IDE — samodzielne utworzenie tabeli nie dodaje wpisu V1 do historii Flyway.
+
+Kolejne pliki migracji numeruj rosnąco. Schemat definiuj w SQL; nie pozwalaj Hibernate tworzyć ani zmieniać tabel. Przy projektowaniu tabel stosuj UUID dla kluczy głównych, `timestamptz` i UTC dla czasu, `numeric` dla kwot i ilości oraz jawne klucze obce, ograniczenia `UNIQUE` i indeksy dla istotnych zapytań. Schematy biznesowe, szczegóły kolumn i indeksów należą do zadań wprowadzających poszczególne funkcje.
+
+Po wdrożeniu migracji nie edytuj jej treści ani nazwy. Zmianę istniejącego schematu zapisz w nowym pliku `V...__.sql`. Przy aktualizacji środowiska z danymi wykonaj kopię bazy, uruchom nową wersję aplikacji i sprawdź log Flyway oraz wpis w `flyway_schema_history`. Ponowny start nie powinien ponownie wykonywać zakończonej migracji. Jeśli migracja się nie powiedzie, start aplikacji kończy się błędem; przed ponowną próbą sprawdź rzeczywisty stan schematu i danych, a poprawkę przygotuj zgodnie z tym stanem.
+
+W `application.yaml` ustawiono `spring.jpa.hibernate.ddl-auto=validate`. Przy uruchomieniu JPA sprawdza zgodność encji `AppUser` ze schematem utworzonym przez Flyway. Test F03 wyłącza tę walidację tylko we własnych, izolowanych schematach próbnych, które nie zawierają tabeli `app_user`.
 
 ## Zatrzymywanie usług
 
